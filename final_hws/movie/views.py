@@ -2,7 +2,8 @@ from django.shortcuts import render
 from . import sterializer, models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
+from django.db.models import Avg, Count
+from .models import Movie, Review, Director
 
 @api_view(['GET'])
 def Director_view(request):
@@ -18,7 +19,14 @@ def Movie_view(request):
     duration = models.Movie.objects()
     director = models.Movie.objects()
     data = sterializer.MovieSterializer(title, description, duration, director).data
-    return Response(data=data)
+    movies = Movie.objects.annotate(avg_rating=Avg('reviews__stars')).prefetch_related('reviews')
+    directors = Director.objects.annotate(movies_count=Count('movies'))
+    context = {
+        'movies': movies,
+        'avg_rating': Review.objects.aggregate(Avg('stars'))['stars__avg'],
+        'directors': directors,
+    }
+    return render(request, context, data)
 
 
 @api_view(['GET'])
